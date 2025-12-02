@@ -1,0 +1,35 @@
+=== TASK 4: ATTACK PATTERN ANALYSIS ===
+
+1. Top 5 Most Active IPs (by request count):
+------------------------------------------
+     26 192.168.1.105
+      8 45.33.2.79
+      8 203.0.113.42
+      8 198.51.100.22
+
+2. Top 10 Most Requested URLs:
+------------------------------
+      8 /login
+      8 /
+      1 /wp-login.php
+      1 /wp-includes/
+      1 /wp-content/uploads/
+      1 /wp-config.php
+      1 /wp-admin
+      1 /style.css
+      1 /sitemap.xml
+      1 /script.js
+
+3. Repeated Requests to Login or Admin Pages:
+--------------------------------------------
+      8 203.0.113.42 /login
+      1 45.33.2.79 /wp-login.php
+      1 198.51.100.22 /admin
+
+4. High-Frequency IPs (potential scanners):
+------------------------------------------
+(IPs with >5 requests — adjust threshold as needed)
+     26 192.168.1.105
+      8 45.33.2.79
+      8 203.0.113.42
+      8 198.51.100.22

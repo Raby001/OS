@@ -1,0 +1,13 @@
+# Task 4: Attack Pattern Analysis
+
+# 1. Top 5 IPs by total requests
+cut -d' ' -f1 original_log/access.log | sort | uniq -c | sort -nr | head -5
+
+# 2. Most requested URLs
+awk '{print $7}' original_log/access.log | sort | uniq -c | sort -nr | head -10
+
+# 3. Repeated login/admin requests
+grep -E "/login|/admin|/wp-login" original_log/access.log | awk '{print $1, $7}' | sort | uniq -c | sort -nr | head -10
+
+# 4. High-frequency IPs (>5 requests)
+cut -d' ' -f1 original_log/access.log | sort | uniq -c | awk '$1 > 5 {print $0}' | sort -nr

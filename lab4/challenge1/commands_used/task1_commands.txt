@@ -1,0 +1,7 @@
+# Task 1: Basic Log Inspection
+ls -1 original_log/ | wc -l
+wc -l original_log/access.log
+head -n 1 original_log/access.log | awk '{print $4}' | tr -d '['
+tail -n 1 original_log/access.log | awk '{print $4}' | tr -d '['
+head -n 5 original_log/access.log
+tail -n 5 original_log/access.log

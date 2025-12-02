@@ -1,0 +1,1 @@
+awk -F"," "{for(i=1; i<=NF; i++) if(\$i ~ /^email:/) {email=substr(\$i,7); if(tolower(email) ~ /^j/) print email}}" data/employee.txt

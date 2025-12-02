@@ -1,0 +1,6 @@
+# Task 2: Failed Login Identification
+# Find log lines with HTTP 401 or 403 status
+grep -E " 40[13] " original_log/access.log
+
+# Extract IPs, count, and sort
+grep -E " 40[13] " original_log/access.log | awk '{print $1}' | sort | uniq -c | sort -nr

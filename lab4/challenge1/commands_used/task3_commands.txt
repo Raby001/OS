@@ -1,0 +1,13 @@
+# Task 3: Suspicious Activity Detection
+
+# 1. Malicious user agents
+grep -iE "bot|scan|exploit|curl|wget" original_log/access.log
+
+# 2. Sensitive paths
+grep -E "/wp-admin|/admin/|/admin$|/\.git" original_log/access.log
+
+# 3. Suspicious query strings
+grep "?cmd=" original_log/access.log
+
+# 4. Optional: other common probes
+grep -E "\.env|/backup|/config|shell|passwd" original_log/access.log

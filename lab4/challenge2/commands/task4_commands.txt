@@ -1,0 +1,1 @@
+grep "department:HR" data/employee.txt | awk -F"," "{for(i=1; i<=NF; i++) if(\$i ~ /^name:/) print substr(\$i,6)}"
