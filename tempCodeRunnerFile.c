@@ -1,0 +1,2 @@
+
+    if (parentPID == piVS.dwProcessId)
