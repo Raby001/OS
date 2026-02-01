@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# ===============================
+# Download Manager Script
+# ===============================
+
+# Loop through all files in current directory
+for file in *; do
+
+  # Skip directories
+  if [ -f "$file" ]; then
+
+    # Extract file extension
+    EXT="${file##*.}"
+
+    # Handle files without extension
+    if [ "$file" = "$EXT" ]; then
+      FOLDER="no_extension"
+    else
+      FOLDER="$EXT"
+    fi
+
+    # Create folder if it does not exist
+    if [ ! -d "$FOLDER" ]; then
+      mkdir "$FOLDER"
+    fi
+
+    # Move file to its extension folder
+    mv "$file" "$FOLDER/"
+  fi
+done
+
+echo "Files organized successfully!"
