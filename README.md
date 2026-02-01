@@ -6,20 +6,32 @@
 
 ## Team Members
 
-| No. | Name            | Student ID  |
-|----:|-----------------|-------------|
-| 1   | HAN Raby        | e20220580   |
-| 2   | CHEA Chanminea  | e20220335   |
-| 3   | HENG Oulong     | e20221390   |
-| 4   | LIM Kity        | e20221479   |
+This project was collaboratively developed by the following team members:
 
+1. **HAN Raby**  
+   Student ID: e20220580  
+
+2. **CHEA Chanminea**  
+   Student ID: e20220335  
+
+3. **HENG Oulong**  
+   Student ID: e20221390  
+
+4. **LIM Kity**  
+   Student ID: e20221479  
 
 ---
+
+## Video
+https://www.youtube.com/watch?v=VxEWCPKL528
+
+
 
 ## Table of Contents
 
 - [CPU Scheduling Algorithm Simulator](#cpu-scheduling-algorithm-simulator)
   - [Team Members](#team-members)
+  - [Video](#video)
   - [Table of Contents](#table-of-contents)
   - [Project Overview](#project-overview)
   - [Project Objectives](#project-objectives)
