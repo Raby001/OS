@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced CPU Scheduler</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .gantt-block { transition: all 0.4s ease; min-height: 45px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; border-right: 1px solid rgba(255,255,255,0.1); }
+    .idle { background: repeating-linear-gradient(45deg, #f1f5f9, #f1f5f9 10px, #e2e8f0 10px, #e2e8f0 20px) !important; color: #94a3b8; }
+    .fade-in { animation: fadeIn 0.5s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body class="bg-slate-100 min-h-screen p-4 md:p-8">
+
+<div class="max-w-6xl mx-auto space-y-6">
+  <header class="bg-slate-900 text-white p-8 rounded-2xl shadow-2xl text-center">
+    <h1 class="text-3xl font-black tracking-tight">OS Scheduler Simulator</h1>
+    <p class="text-slate-400 mt-2">FCFS, SJF, SRTF, RR, MLQ & MLFQ</p>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold mb-4 flex items-center text-slate-700">Settings</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Algorithm</label>
+          <select id="algo" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="FCFS">First Come First Serve</option>
+            <option value="SJF">Shortest Job First (Non-Preemptive)</option>
+            <option value="SRT">Shortest Remaining Time (Preemptive)</option>
+            <option value="RR">Round Robin</option>
+            <option value="MLQ">Multilevel Queue (Fixed Priority)</option>
+            <option value="MLFQ">Multilevel Feedback Queue (3-Level)</option>
+          </select>
+        </div>
+
+        <div id="quantumGroup" class="hidden">
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Time Quantum (RR Only)</label>
+          <input id="quantum" type="number" value="2" class="w-full p-3 bg-slate-50 border rounded-xl">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Arrival Times</label>
+          <input id="arrivalInput" type="text" placeholder="0 2 4 6" class="w-full p-3 bg-slate-50 border rounded-xl">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Burst Times</label>
+          <input id="burstInput" type="text" placeholder="8 4 9 5" class="w-full p-3 bg-slate-50 border rounded-xl">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Priorities (for MLQ: 0=High, 1=Med, 2=Low)</label>
+          <input id="priorityInput" type="text" placeholder="0 1 0 2" class="w-full p-3 bg-slate-50 border rounded-xl">
+        </div>
+
+        <button onclick="solve()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold transition-all">
+          Run Simulation
+        </button>
+
+        <button onclick="loadTeacherSample()" class="w-full text-blue-600 text-xs font-bold py-2 border border-blue-100 rounded-lg hover:bg-blue-50">
+          Load MLFQ Test Case
+        </button>
+      </div>
+    </div>
+
+    <div class="lg:col-span-2 space-y-6">
+      <div id="output" class="hidden fade-in space-y-6">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+          <h3 class="font-bold text-slate-800 mb-4">Gantt Chart</h3>
+          <div id="gantt" class="flex h-12 rounded-xl overflow-hidden border border-slate-200 shadow-inner"></div>
+          <div id="ganttScale" class="relative h-6 mt-2 text-xs font-mono text-slate-400"></div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <table class="w-full text-center">
+            <thead class="bg-slate-50 border-b">
+              <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                <th class="p-4">Job</th>
+                <th class="p-4">Priority</th>
+                <th class="p-4">Arrival</th>
+                <th class="p-4">Burst</th>
+                <th class="p-4">Finish</th>
+                <th class="p-4">TAT</th>
+                <th class="p-4">WT</th>
+              </tr>
+            </thead>
+            <tbody id="resultBody" class="text-sm"></tbody>
+          </table>
+          <div id="statCards" class="grid grid-cols-2 bg-blue-50/50 border-t border-blue-100"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6', '#06b6d4', '#f43f5e'];
+
+  document.getElementById('algo').addEventListener('change', (e) => {
+    document.getElementById('quantumGroup').classList.toggle('hidden', e.target.value !== 'RR');
+  });
+
+  function loadTeacherSample() {
+    document.getElementById('arrivalInput').value = '0 1 2 4';
+    document.getElementById('burstInput').value = '4 6 8 2';
+    document.getElementById('priorityInput').value = '0 1 2 0';
+    document.getElementById('algo').value = 'MLFQ';
+    solve();
+  }
+
+  function parse() {
+    const a = document.getElementById('arrivalInput').value.trim().split(/\s+/).filter(x => x).map(Number);
+    const b = document.getElementById('burstInput').value.trim().split(/\s+/).filter(x => x).map(Number);
+    const p = document.getElementById('priorityInput').value.trim().split(/\s+/).filter(x => x).map(Number);
+    
+    if (a.length === 0 || a.length !== b.length) {
+        alert("Input mismatch! Please ensure Arrival and Burst times have the same count.");
+        return null;
+    }
+    return a.map((v, i) => ({ 
+        pid: String.fromCharCode(65 + i), 
+        arrival: v, 
+        burst: b[i], 
+        priority: (p[i] !== undefined) ? p[i] : 0, 
+        id: i 
+    }));
+  }
+
+  function solve() {
+    const procs = parse(); if (!procs) return;
+    const algo = document.getElementById('algo').value;
+    const q = parseInt(document.getElementById('quantum').value);
+    let res;
+
+    if (algo === 'FCFS') res = solveFCFS(procs);
+    else if (algo === 'SJF') res = solveSJF(procs);
+    else if (algo === 'SRT') res = solveSRT(procs);
+    else if (algo === 'RR') res = solveRR(procs, q);
+    else if (algo === 'MLQ') res = solveMLQ(procs);
+    else if (algo === 'MLFQ') res = solveMLFQ(procs);
+
+    document.getElementById('output').classList.remove('hidden');
+    renderGantt(res.gantt);
+    renderTable(res.metrics);
+  }
+
+  // --- Algorithms ---
+
+  function solveFCFS(procs) {
+    let t = 0, gantt = [], metrics = [];
+    let jobs = [...procs].sort((a,b) => a.arrival - b.arrival);
+    jobs.forEach(p => {
+      if (t < p.arrival) { gantt.push({ pid: 'Idle', start: t, duration: p.arrival - t }); t = p.arrival; }
+      gantt.push({ pid: p.pid, start: t, duration: p.burst, color: colors[p.id % colors.length] });
+      t += p.burst;
+      metrics.push({ ...p, finish: t, tat: t - p.arrival, wt: t - p.arrival - p.burst });
+    });
+    return { gantt, metrics };
+  }
+
+  function solveSJF(procs) {
+    let t = 0, gantt = [], metrics = [], rem = procs.map(p => ({...p}));
+    while (metrics.length < procs.length) {
+      let ready = rem.filter(p => p.arrival <= t && !p.done);
+      if (!ready.length) { 
+        let nextArrival = Math.min(...rem.filter(p => !p.done).map(p => p.arrival));
+        gantt.push({ pid: 'Idle', start: t, duration: nextArrival - t });
+        t = nextArrival; 
+        continue; 
+      }
+      ready.sort((a,b) => a.burst - b.burst || a.arrival - b.arrival);
+      let p = ready[0];
+      gantt.push({ pid: p.pid, start: t, duration: p.burst, color: colors[p.id % colors.length] });
+      t += p.burst; p.done = true;
+      metrics.push({ ...p, finish: t, tat: t - p.arrival, wt: t - p.arrival - p.burst });
+    }
+    return { gantt, metrics };
+  }
+
+  function solveSRT(procs) {
+    let t = 0, gantt = [], metrics = [], rem = procs.map(p => ({...p, r: p.burst}));
+    let last = null;
+    while (metrics.length < procs.length) {
+      let ready = rem.filter(p => p.arrival <= t && p.r > 0);
+      if (!ready.length) { 
+        if (gantt.length && gantt[gantt.length-1].pid === 'Idle') gantt[gantt.length-1].duration++;
+        else gantt.push({ pid: 'Idle', start: t, duration: 1 });
+        t++; continue; 
+      }
+      ready.sort((a,b) => a.r - b.r || a.arrival - b.arrival);
+      let p = ready[0];
+      if (p.pid !== last) gantt.push({ pid: p.pid, start: t, duration: 0, color: colors[p.id % colors.length] });
+      gantt[gantt.length-1].duration++; p.r--; t++; last = p.pid;
+      if (p.r === 0) {
+        metrics.push({ ...p, finish: t, tat: t - p.arrival, wt: t - p.arrival - p.burst });
+        last = null;
+      }
+    }
+    return { gantt, metrics };
+  }
+
+  function solveRR(procs, q) {
+    let t = 0, gantt = [], metrics = [], queue = [];
+    let rem = procs.map(p => ({...p, r: p.burst})).sort((a,b) => a.arrival - b.arrival);
+    while (metrics.length < procs.length) {
+      while(rem.length && rem[0].arrival <= t) queue.push(rem.shift());
+      if (!queue.length) { 
+        gantt.push({ pid: 'Idle', start: t, duration: 1 });
+        t++; continue; 
+      }
+      let p = queue.shift();
+      let exec = Math.min(p.r, q);
+      gantt.push({ pid: p.pid, start: t, duration: exec, color: colors[p.id % colors.length] });
+      for(let i=0; i<exec; i++){ t++; while(rem.length && rem[0].arrival <= t) queue.push(rem.shift()); }
+      p.r -= exec;
+      if (p.r > 0) queue.push(p);
+      else metrics.push({ ...p, finish: t, tat: t - p.arrival, wt: t - p.arrival - p.burst });
+    }
+    return { gantt, metrics };
+  }
+
+  // --- Multilevel Queue (MLQ) ---
+  function solveMLQ(procs) {
+    let t = 0, gantt = [], metrics = [];
+    let rem = procs.map(p => ({...p, r: p.burst})).sort((a,b) => a.arrival - b.arrival);
+    let queues = [[], [], []]; // 0: High, 1: Medium, 2: Low
+    let lastPid = null;
+
+    while (metrics.length < procs.length) {
+      while(rem.length && rem[0].arrival <= t) {
+        let p = rem.shift();
+        let target = p.priority > 2 ? 2 : p.priority;
+        queues[target].push(p);
+      }
+
+      let activeIdx = queues.findIndex(q => q.length > 0);
+
+      if (activeIdx === -1) {
+        if (gantt.length && gantt[gantt.length-1].pid === 'Idle') gantt[gantt.length-1].duration++;
+        else gantt.push({ pid: 'Idle', start: t, duration: 1 });
+        t++; continue;
+      }
+
+      let p = queues[activeIdx].shift();
+      if (p.pid !== lastPid) {
+        gantt.push({ pid: p.pid, start: t, duration: 0, color: colors[p.id % colors.length] });
+      }
+
+      gantt[gantt.length - 1].duration += 1;
+      p.r -= 1;
+      t += 1;
+      lastPid = p.pid;
+
+      if (p.r > 0) {
+        queues[activeIdx].unshift(p); // Put back to front of its queue
+      } else {
+        metrics.push({ ...p, finish: t, tat: t - p.arrival, wt: t - p.arrival - p.burst });
+        lastPid = null;
+      }
+    }
+    return { gantt, metrics };
+  }
+
+  // --- Multilevel Feedback Queue (MLFQ) ---
+  function solveMLFQ(procs) {
+    let t = 0, gantt = [], metrics = [];
+    let q1 = [], q2 = [], q3 = [];
+    let rem = procs.map(p => ({...p, r: p.burst, waitInQueue: 0})).sort((a,b) => a.arrival - b.arrival);
+    const ageLimit = 15;
+
+    while (metrics.length < procs.length) {
+      while(rem.length && rem[0].arrival <= t) { q1.push(rem.shift()); }
+
+      [q2, q3].forEach((q, idx) => {
+        for(let i=0; i<q.length; i++) {
+          q[i].waitInQueue++;
+          if(q[i].waitInQueue >= ageLimit) {
+            let p = q.splice(i, 1)[0];
+            p.waitInQueue = 0;
+            if(idx === 0) q1.push(p); else q2.push(p);
+            i--;
+          }
+        }
+      });
+
+      let p, quantum, targetQueue;
+      if (q1.length) { p = q1.shift(); quantum = 2; targetQueue = q2; }
+      else if (q2.length) { p = q2.shift(); quantum = 4; targetQueue = q3; }
+      else if (q3.length) { p = q3.shift(); quantum = 1; targetQueue = q3; }
+      else { 
+        if (gantt.length && gantt[gantt.length-1].pid === 'Idle') gantt[gantt.length-1].duration++;
+        else gantt.push({ pid: 'Idle', start: t, duration: 1 });
+        t++; continue; 
+      }
+
+      let exec = Math.min(p.r, quantum);
+      gantt.push({ pid: p.pid, start: t, duration: exec, color: colors[p.id % colors.length] });
+      
+      for(let i=0; i<exec; i++) {
+        t++;
+        while(rem.length && rem[0].arrival <= t) { q1.push(rem.shift()); }
+      }
+
+      p.r -= exec;
+      p.waitInQueue = 0;
+      if (p.r > 0) targetQueue.push(p);
+      else metrics.push({ ...p, finish: t, tat: t - p.arrival, wt: t - p.arrival - p.burst });
+    }
+    return { gantt, metrics };
+  }
+
+  function renderGantt(data) {
+    const g = document.getElementById('gantt');
+    const s = document.getElementById('ganttScale');
+    g.innerHTML = ''; s.innerHTML = '';
+    const total = data.reduce((acc, c) => acc + c.duration, data[0].start);
+    data.forEach(b => {
+      const el = document.createElement('div');
+      el.className = `gantt-block ${b.pid === 'Idle' ? 'idle' : ''}`;
+      el.style.width = `${(b.duration / total) * 100}%`;
+      el.style.backgroundColor = b.color || '';
+      el.innerText = b.pid === 'Idle' ? '' : b.pid;
+      g.appendChild(el);
+      
+      const l = document.createElement('span');
+      l.style.position = 'absolute'; 
+      l.style.left = `${(b.start / total) * 100}%`;
+      l.innerText = b.start; 
+      s.appendChild(l);
+    });
+    const last = document.createElement('span');
+    last.style.position = 'absolute'; last.style.left = '100%'; last.style.transform = 'translateX(-100%)';
+    last.innerText = total; s.appendChild(last);
+  }
+
+  function renderTable(metrics) {
+    const body = document.getElementById('resultBody');
+    body.innerHTML = '';
+    let tat = 0, wt = 0;
+    metrics.sort((a,b) => a.id - b.id).forEach(m => {
+      tat += m.tat; wt += m.wt;
+      body.innerHTML += `
+        <tr class="border-b hover:bg-slate-50 transition-colors">
+          <td class="p-4 font-bold text-blue-600">${m.pid}</td>
+          <td class="p-4 text-slate-400 font-mono">${m.priority}</td>
+          <td class="p-4">${m.arrival}</td>
+          <td class="p-4">${m.burst}</td>
+          <td class="p-4 font-semibold">${m.finish}</td>
+          <td class="p-4">${m.tat}</td>
+          <td class="p-4">${m.wt}</td>
+        </tr>`;
+    });
+    document.getElementById('statCards').innerHTML = `
+      <div class="p-4 text-center border-r">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Avg Turnaround</p>
+        <p class="text-xl font-bold text-blue-700">${(tat/metrics.length).toFixed(3)}</p>
+      </div>
+      <div class="p-4 text-center">
+        <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Avg Waiting</p>
+        <p class="text-xl font-bold text-blue-700">${(wt/metrics.length).toFixed(3)}</p>
+      </div>`;
+  }
+</script>
+</body>
+</html>
